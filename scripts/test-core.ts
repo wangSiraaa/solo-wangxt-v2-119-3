@@ -31,12 +31,28 @@ for (const s of SAMPLES) {
     assert(stats.islands.length === 2, `mirrored: 两片 3D 不相邻 => 2 个岛，实际 ${stats.islands.length}`);
     assert(flipped === 1, 'mirrored: 应有 1 个翻转三角形');
     assert(stats.islands.some(i => i.mirrored), 'mirrored: 应有岛判定镜像');
+    // 两岛 UV 完全重合 => 镜像岛与另一岛的“与其他岛重叠三角形数”均为 1
+    const mirIsl = stats.islands.find(i => i.mirrored)!;
+    assert(mirIsl.overlapTriCount === 1, `mirrored: 镜像岛重叠三角数 1，实际 ${mirIsl.overlapTriCount}`);
+    assert(mirIsl.faceCount === 1 && mirIsl.faceIds.length === 1, 'mirrored: 镜像岛 1 面');
+    assert(mirIsl.uvArea === 0.5, `mirrored: 镜像岛 UV 面积 0.5，实际 ${mirIsl.uvArea}`);
+    assert(Math.abs(mirIsl.maxAngleDistortion - 45) < 1e-6, `mirrored: 反射+顶点置换使对应内角差 45°，实际 ${mirIsl.maxAngleDistortion}`);
   }
   if (s.id === 'seams') {
     assert(seams === 12, `seams: 立方体应有 12 条接缝，实际 ${seams}`);
     assert(nm === 0, 'seams: 不应有非流形边');
     assert(stats.islands.length === 6, `seams: 应有 6 个 UV 岛，实际 ${stats.islands.length}`);
     assert(flipped === 0, `seams: 所有面绕序应一致，实际翻转 ${flipped}`);
+    // 清单逐岛字段：立方体每面被扇形写成 2 条三角 f（2 个 faceId），
+    // 每岛 UV 各占一个单位方格（面积 1）。
+    for (const isl of stats.islands) {
+      assert(isl.faceCount === 2, `seams: 岛 ${isl.id} 面数 2，实际 ${isl.faceCount}`);
+      assert(isl.triIds.length === 2, `seams: 岛 ${isl.id} 三角形 2，实际 ${isl.triIds.length}`);
+      assert(Math.abs(isl.uvArea - 1) < 1e-9, `seams: 岛 ${isl.id} UV 面积 1，实际 ${isl.uvArea}`);
+      assert(isl.mirrored === false, `seams: 岛 ${isl.id} 不应镜像`);
+      assert(isl.overlapTriCount === 0, `seams: 岛 ${isl.id} 不应重叠`);
+      assert(isl.maxAngleDistortion === 0, `seams: 岛 ${isl.id} 角度畸变 0，实际 ${isl.maxAngleDistortion}`);
+    }
   }
   if (s.id === 'nonmanifold') {
     assert(nm === 1, `nonmanifold: 应有 1 条非流形边，实际 ${nm}`);
@@ -85,6 +101,27 @@ assert(duplicatedLocs === 8, `seams: 8 个空间角点位置各有 3 个独立 v
 assert(posCounts.size === 8, `seams: 只有 8 个不同空间位置，实际 ${posCounts.size}`);
 assert(seam.vertexCount === 24, 'seams: 24 个稳定顶点身份（不焊接）');
 assert(seam.corners.length === 36, 'seams: 角点总数 36（6 面 × 2 三角 × 3）');
+
+// 岛清单身份：id 总是从 0 连续编号；faceIds 恰好等于岛内三角形的 faceId
+// 集合；对另一个模型重新分析（模拟载入新 OBJ / 自动展开后刷新）同样得到
+// 从 0 开始的全新编号，不沿用上一次分析的岛身份。
+function checkIslandRoster(m, st) {
+  const ids = st.islands.map(i => i.id);
+  assert(ids.every((x, k) => x === k), 'islands: id 从 0 连续编号');
+  let triCovered = 0;
+  for (const isl of st.islands) {
+    const triFaces = new Set(isl.triIds.map(tid => m.triangles[tid].faceId));
+    assert(isl.faceCount === triFaces.size, `islands: 岛 ${isl.id} faceCount 与三角形面集合一致`);
+    assert(isl.faceIds.length === triFaces.size && isl.faceIds.every(f => triFaces.has(f)),
+      `islands: 岛 ${isl.id} faceIds 恰好覆盖岛内 faceId`);
+    triCovered += isl.triIds.length;
+  }
+  assert(triCovered === m.triangles.length, 'islands: 清单三角形并集覆盖整网');
+}
+checkIslandRoster(seam, analyzeMesh(seam));
+checkIslandRoster(seam, analyzeMesh(seam));
+const degMesh = parseObj(SAMPLES.find(s => s.id === 'degenerate')!.obj);
+checkIslandRoster(degMesh, analyzeMesh(degMesh));
 
 console.log(failures === 0 ? '\nALL CORE TESTS PASSED' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

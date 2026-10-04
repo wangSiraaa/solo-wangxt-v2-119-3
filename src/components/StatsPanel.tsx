@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useApp } from '../state/AppContext';
+import { IslandList } from './IslandList';
 import type { TriMetrics } from '../core/types';
 
 function fmt(n: number | null | undefined, digits = 3): string {
@@ -178,6 +179,8 @@ export function StatsPanel() {
         />
         <p className="hint">对应 3D/UV 内角最大差值；0° 为保角映射。</p>
       </section>
+
+      <IslandList />
 
       <section>
         <h3>选中面{selectedFaceIds.size > 0 ? `（${selectedFaceIds.size} 面 / ${selectedAgg?.triCount ?? 0} 三角）` : ''}</h3>

@@ -35,6 +35,7 @@ node --import tsx scripts/e2e.ts
 | 稳定顶点与面身份的 OBJ 子集 | `src/core/parser.ts`：`v/vt/vn/f`、负索引、n 边形扇形三角化 |
 | 接缝两侧可有不同 UV，不按空间位置合并顶点 | 角点（corner）模型 + 全程非索引渲染，见下 |
 | 选中面两视图同步 | 选择集是 **faceId** 集合；两视图拾取都映射回 `tri.faceId` |
+| 可排序 UV 岛清单 | `src/components/IslandList.tsx`：逐岛面数/UV面积/镜像/重叠三角/最大角畸，点行选中该岛全部 faceId（双视图同步），再点取消，Shift+点选增删 |
 | 棋盘纹理辅助判断 | 程序化 Canvas 棋盘，可开关、可选 4/8/16/32 格 |
 | 面积畸变 / 角度畸变分别显示 | `src/core/metrics.ts`，面板分区显示 |
 | 退化面不参与普通比率计算 | 薄片（sliver）判据，比率与角度为 `null` |
@@ -74,6 +75,10 @@ UV 岛的连通要求**同时**满足 3D 共享边且该边两端 UV 一致—�
   比率/角度为 `—`，也不参与岛间重叠检测。
 - **岛间重叠**：包围盒分桶 + Sutherland–Hodgman 求交面积，跨岛且
   交叠面积显著非零才标记。
+- **岛清单**：`IslandInfo` 每岛带 `faceIds / faceCount / uvArea /
+  mirrored / overlapTriCount / maxAngleDistortion`，均由
+  `analyzeMesh` 对当前网格直接算出；载入新 OBJ 或 xatlas 展开后重新
+  分析，岛编号从 0 重新连续编号，绝不沿用上一个模型的岛身份。
 
 ## xatlas 身份映射
 

@@ -217,6 +217,10 @@ export function View3D() {
     const g = buildSelectionOverlay(meshData, state.selectedFaceIds, world.positions);
     world.overlay.geometry.dispose();
     world.overlay.geometry = g;
+    // 暴露给测试/调试：与 2D 视图的同名属性对照，确认选中同一批三角形
+    let selTris = 0;
+    for (const t of meshData.triangles) if (state.selectedFaceIds.has(t.faceId)) selTris++;
+    if (mountRef.current) mountRef.current.dataset.selTris = String(selTris);
   }, [state.selectedFaceIds, meshData]);
 
   // 拾取：区分单击与拖动（拖动交给 OrbitControls）

@@ -207,6 +207,10 @@ export function View2D() {
     if (!world || !meshData) return;
     world.selection.geometry.dispose();
     world.selection.geometry = buildUvSelection(meshData, state.selectedFaceIds);
+    // 暴露给测试/调试：两视图该属性相等即说明同步高亮同一批三角形
+    let selTris = 0;
+    for (const t of meshData.triangles) if (state.selectedFaceIds.has(t.faceId)) selTris++;
+    if (mountRef.current) mountRef.current.dataset.selTris = String(selTris);
   }, [state.selectedFaceIds, meshData]);
 
   // 拾取（平移与点选区分）

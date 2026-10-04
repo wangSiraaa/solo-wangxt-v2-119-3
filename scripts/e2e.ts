@@ -27,6 +27,20 @@ check('接缝立方体: 12 条共享边接缝', /共享边接缝\s*\n?\s*12/.tes
 check('接缝立方体: 6 个 UV 岛', /UV 岛\s*6/.test(panel));
 check('接缝立方体: 角点 36', /角点 \(corner\)\s*36/.test(panel));
 check('接缝立方体: 顶点身份 24', /顶点身份 \(v\)\s*24/.test(panel));
+// 验收：接缝立方体清单数量与总览一致；逐岛面数/镜像/重叠正确
+const cubeRows = page.locator('[data-testid=island-table] .island-row');
+check('接缝立方体: 岛清单 6 行（与总览一致）', await cubeRows.count() === 6, `rows=${await cubeRows.count()}`);
+check('接缝立方体: 无镜像岛行', await page.locator('.island-row.mirrored').count() === 0);
+{
+  const texts = await cubeRows.allInnerTexts();
+  const everyTwoFaces = texts.every((t) => /^[0-5]\s+2\s+1\.000\s+—\s+0\s+0\.0°/.test(t.trim()));
+  check('接缝立方体: 每岛 2 面 / UV面积1 / 无重叠 / 0°畸变', everyTwoFaces, JSON.stringify(texts[0]));
+}
+// 点选岛 0：选中其 2 个 faceId（共 2 三角），双视图同步
+await page.locator('.island-row[data-island-id="0"]').click();
+await sleep(120);
+panel = await page.locator('.panel').innerText();
+check('点选岛 0 选中 2 面 / 2 三角', /选中面\s*（2 面 \/ 2 三角）/.test(panel), panel.match(/选中面[^\n]*/)?.[0]);
 
 // 2) 3D 视图拾取：点击 3D 画布中心区域，应选中某一面
 const box3d = await page.locator('.view3d canvas').boundingBox();
@@ -57,6 +71,29 @@ await sleep(200);
 panel = await page.locator('.panel').innerText();
 check('镜像岛: 1 个翻转三角', /翻转三角形 \/ 镜像岛\s*1 \/ 1/.test(panel), panel.match(/翻转[^\n]*/)?.[0]);
 
+// 5b) UV 岛清单：镜像样例 2 个岛，行数与总览一致；点镜像岛双视图选中同一批面
+const islandRows = page.locator('[data-testid=island-table] .island-row');
+check('岛清单: 镜像样例行数 2（与总览一致）', await islandRows.count() === 2, `rows=${await islandRows.count()}`);
+// 找到“镜像”标记的那一行
+const mirroredRow = page.locator('.island-row.mirrored').first();
+check('岛清单: 恰好 1 个镜像岛行', await page.locator('.island-row.mirrored').count() === 1);
+// 镜像样例每岛 1 个三角形，镜像岛与另一岛完全重叠 => 该行重叠三角列为 1
+const mirRowText = await mirroredRow.innerText();
+check('岛清单: 镜像岛行显示重叠三角 1', /(^|\n|\s)1(\s|$)/.test(mirRowText) && /镜像/.test(mirRowText), JSON.stringify(mirRowText));
+await mirroredRow.click();
+await sleep(150);
+panel = await page.locator('.panel').innerText();
+check('点选镜像岛选中其 1 个面', /选中面\s*（1 面 \/ 1 三角）/.test(panel), panel.match(/选中面[^\n]*/)?.[0]);
+const sel3d = await page.locator('.view3d').getAttribute('data-sel-tris');
+const sel2d = await page.locator('.view2d').getAttribute('data-sel-tris');
+check('双视图同步高亮同一批三角形(各 1)', sel3d === '1' && sel2d === '1', `3d=${sel3d} 2d=${sel2d}`);
+check('清单行进入选中态', await mirroredRow.evaluate((el) => el.classList.contains('sel-on')));
+// 再点一次从清单取消选择
+await mirroredRow.click();
+await sleep(120);
+const selAfter = await page.locator('.view3d').getAttribute('data-sel-tris');
+check('再点已选岛从清单取消选择', selAfter === '0', `sel=${selAfter}`);
+
 // 6) 退化混合样例
 await page.locator('.toolbar .dropdown button', { hasText: '样例' }).hover();
 await page.locator('.dropdown .menu button', { hasText: '退化' }).click();
@@ -81,6 +118,32 @@ const charts = notice.match(/(\d+) 个图/)?.[1];
 check('xatlas 立方体产出 6 图', charts === '6', `got ${charts}`);
 check('展开后角点仍 36（身份保留）', /角点 \(corner\)\s*36/.test(panel));
 check('展开后顶点身份仍 24（不空间合并模型）', /顶点身份 \(v\)\s*24/.test(panel));
+// 验收：重新展开后清单与新岛结构一致 —— 6 行、无残留选中态（展开前选的是旧岛），
+// 岛编号重新从 0..5 开始，且总览数字与清单一致
+{
+  const afterRows = page.locator('[data-testid=island-table] .island-row');
+  check('重新展开: 岛清单刷新为 6 行', await afterRows.count() === 6, `rows=${await afterRows.count()}`);
+  const ids = await page.locator('.island-row').evaluateAll(
+    (els) => els.map((el) => (el as HTMLElement).dataset.islandId),
+  );
+  check('重新展开: 岛编号重新从 0 连续编号', JSON.stringify(ids) === JSON.stringify(['0', '1', '2', '3', '4', '5']), JSON.stringify(ids));
+  // 选择状态须与新岛结构一致：每个岛要么整岛选中、要么未选，不允许残留“半个岛”
+  check('重新展开: 选择状态与新岛结构一致(无部分选中)', await page.locator('.island-row.sel-part').count() === 0);
+  check('重新展开: 总览与清单数量一致', /UV 岛\s*6/.test(panel));
+  // 展开后再点一个新岛，应能按新岛结构选中；两视图选中三角形数一致
+  await page.locator('.island-row[data-island-id="3"]').click();
+  await sleep(120);
+  const p2 = await page.locator('.panel').innerText();
+  const picked = p2.match(/选中面\s*（(\d+) 面 \/ (\d+) 三角）/);
+  check('重新展开: 点选新岛 3 能选中其面', !!picked && Number(picked[2]) >= 1, p2.match(/选中面[^\n]*/)?.[0]);
+  const s3 = await page.locator('.view3d').getAttribute('data-sel-tris');
+  const s2 = await page.locator('.view2d').getAttribute('data-sel-tris');
+  check('重新展开: 双视图同步新岛选择', s3 !== null && s3 === s2 && Number(s3) >= 1, `3d=${s3} 2d=${s2}`);
+  check('重新展开: 清单行显示整岛选中', await page.locator('.island-row[data-island-id="3"]').evaluate((el) => el.classList.contains('sel-on')));
+  // 清空选择，避免影响后续导出往返的面板断言
+  await page.locator('.island-row[data-island-id="3"]').click();
+  await sleep(100);
+}
 
 // 8) 导出 OBJ：拦截下载，用页面内文本做往返断言
 const [download] = await Promise.all([

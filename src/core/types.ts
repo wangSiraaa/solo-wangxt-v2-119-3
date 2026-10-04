@@ -108,9 +108,17 @@ export interface EdgeInfo {
 export interface IslandInfo {
   id: number;
   triIds: number[];
+  /** 岛内不同原始面（faceId）数量。 */
+  faceCount: number;
+  /** 岛内全部 faceId（升序、去重）；点击清单时选中这一批面。 */
+  faceIds: number[];
+  /** 岛内三角形 UV 面积之和（|有向面积|，含退化为 0 的贡献）。 */
+  uvArea: number;
   mirrored: boolean;
   /** 与其他岛重叠的三角形数。 */
   overlapTriCount: number;
+  /** 岛内最大角度畸变（度）；岛内三角形全退化时为 null。 */
+  maxAngleDistortion: number | null;
 }
 
 export interface MeshStats {

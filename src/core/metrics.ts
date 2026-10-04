@@ -412,13 +412,30 @@ function buildIslands(
   let id = 0;
   for (const [, triIds] of groups) {
     let flipped = 0;
+    let uvArea = 0;
+    let maxAngle: number | null = null;
+    const faceSet = new Set<number>();
     for (const tid of triIds) {
       const m = metrics[tid];
       if (!m.degenerate3d && !m.degenerateUv && m.flipped) flipped++;
+      uvArea += m.areaUv;
+      if (m.angleDistortion !== null) {
+        maxAngle = maxAngle === null ? m.angleDistortion : Math.max(maxAngle, m.angleDistortion);
+      }
+      faceSet.add(mesh.triangles[tid].faceId);
     }
     // 岛内只要有三角形翻转即判为镜像岛：展开结果中一片反向 UV 对整
     // 张贴图就是镜像；多数决会漏掉“一正一反”两张面的折纸情形。
-    islands.push({ id: id++, triIds, mirrored: flipped > 0, overlapTriCount: 0 });
+    islands.push({
+      id: id++,
+      triIds,
+      faceCount: faceSet.size,
+      faceIds: [...faceSet].sort((a, b) => a - b),
+      uvArea,
+      mirrored: flipped > 0,
+      overlapTriCount: 0,
+      maxAngleDistortion: maxAngle,
+    });
   }
   return islands;
 }
