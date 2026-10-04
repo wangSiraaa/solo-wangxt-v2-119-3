@@ -250,7 +250,11 @@ export function View2D() {
   }, [selectFaces, toggleFace]);
 
   return (
-    <div className="view view2d" ref={mountRef}>
+    <div
+      className="view view2d"
+      ref={mountRef}
+      data-selected-faces={state.selectedFaceIds.size}
+    >
       <div className="view-label">
         2D UV — V 向上（OBJ 原生方向）· 双击自适应 · 拖动平移/滚轮缩放
       </div>

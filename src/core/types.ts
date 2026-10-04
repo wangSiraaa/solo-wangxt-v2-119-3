@@ -106,11 +106,20 @@ export interface EdgeInfo {
 }
 
 export interface IslandInfo {
+  /** 每次 analyzeMesh 重新编号（0 起）；载入新 OBJ / 重新展开后不复用旧编号。 */
   id: number;
   triIds: number[];
+  /** 岛所含【原始面】id（n 边形的多个三角形只算一个面）。 */
+  faceIds: number[];
   mirrored: boolean;
   /** 与其他岛重叠的三角形数。 */
   overlapTriCount: number;
+  /** 原始面数（faceIds.length，冗余字段便于排序）。 */
+  faceCount: number;
+  /** UV 有向面积绝对值之和（全部三角形，含退化）。 */
+  uvArea: number;
+  /** 岛内最大角度畸变（度）；全退化时为 null。 */
+  maxAngleDistortion: number | null;
 }
 
 export interface MeshStats {

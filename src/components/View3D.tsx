@@ -268,7 +268,11 @@ export function View3D() {
   }, [meshData]);
 
   return (
-    <div className="view view3d" ref={mountRef}>
+    <div
+      className="view view3d"
+      ref={mountRef}
+      data-selected-faces={state.selectedFaceIds.size}
+    >
       <div className="view-label">3D 模型 — {label}</div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useApp } from '../state/AppContext';
+import { IslandList } from './IslandList';
 import type { TriMetrics } from '../core/types';
 
 function fmt(n: number | null | undefined, digits = 3): string {
@@ -134,6 +135,8 @@ export function StatsPanel() {
         <Row k="非流形边" v={summary.nm} cls={chip(summary.nm === 0)}
           hint="≥3 个三角形共享的 3D 边" />
       </section>
+
+      <IslandList />
 
       <section>
         <h3>UV 健康</h3>

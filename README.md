@@ -35,6 +35,7 @@ node --import tsx scripts/e2e.ts
 | 稳定顶点与面身份的 OBJ 子集 | `src/core/parser.ts`：`v/vt/vn/f`、负索引、n 边形扇形三角化 |
 | 接缝两侧可有不同 UV，不按空间位置合并顶点 | 角点（corner）模型 + 全程非索引渲染，见下 |
 | 选中面两视图同步 | 选择集是 **faceId** 集合；两视图拾取都映射回 `tri.faceId` |
+| 可排序 UV 岛清单 | `StatsPanel` 内 `IslandList.tsx`：逐岛面数/UV 面积/镜像/重叠三角形数/最大角畸，点击行选中该岛全部 faceId（双视图同步），可再点取消 |
 | 棋盘纹理辅助判断 | 程序化 Canvas 棋盘，可开关、可选 4/8/16/32 格 |
 | 面积畸变 / 角度畸变分别显示 | `src/core/metrics.ts`，面板分区显示 |
 | 退化面不参与普通比率计算 | 薄片（sliver）判据，比率与角度为 `null` |
